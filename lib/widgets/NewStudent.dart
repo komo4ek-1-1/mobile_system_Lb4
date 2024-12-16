@@ -1,23 +1,24 @@
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/student.dart';
+import '../providers/departments_provider.dart';
 
-class NewStudent extends StatefulWidget {
+class NewStudent extends ConsumerStatefulWidget {
   final Student? student; // Якщо null, то це додавання; якщо є - редагування
   final Function(Student) onSave; // Callback для збереження студента
 
   const NewStudent({super.key, this.student, required this.onSave});
 
   @override
-  State<NewStudent> createState() => _NewStudentState();
+  ConsumerState<NewStudent> createState() => _NewStudentState();
 }
 
-class _NewStudentState extends State<NewStudent> {
+class _NewStudentState extends ConsumerState<NewStudent> {
   // Контролери для текстових полів
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
 
-  Department? _selectedDepartment; // Вибраний департамент
+  String? _selectedDepartmentId; // Вибраний департамент
   Gender? _selectedGender; // Вибрана стать
   int _grade = 0; // Початкова оцінка
 
@@ -29,14 +30,14 @@ class _NewStudentState extends State<NewStudent> {
     if (widget.student != null) {
       _firstNameController.text = widget.student!.firstName;
       _lastNameController.text = widget.student!.lastName;
-      _selectedDepartment = widget.student!.department;
+      _selectedDepartmentId = widget.student!.departmentId;
       _selectedGender = widget.student!.gender;
       _grade = widget.student!.grade;
     }
   }
 
   void _saveStudent() {
-    if (_selectedDepartment == null || _selectedGender == null) {
+    if (_selectedDepartmentId == null || _selectedGender == null) {
       // Перевірка на заповненість полів
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
@@ -48,7 +49,7 @@ class _NewStudentState extends State<NewStudent> {
     final newStudent = Student(
       firstName: _firstNameController.text,
       lastName: _lastNameController.text,
-      department: _selectedDepartment!,
+      departmentId: _selectedDepartmentId!,
       gender: _selectedGender!,
       grade: _grade,
     );
@@ -59,6 +60,8 @@ class _NewStudentState extends State<NewStudent> {
 
   @override
   Widget build(BuildContext context) {
+    final departments = ref.watch(departmentsProvider);
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -72,24 +75,24 @@ class _NewStudentState extends State<NewStudent> {
             controller: _lastNameController,
             decoration: const InputDecoration(labelText: 'Last Name'),
           ),
-          DropdownButton<Department>(
-            value: _selectedDepartment,
-            hint: const Text('Select Department'),
-            items: Department.values.map((dept) {
+          DropdownButtonFormField<String>(
+            value: _selectedDepartmentId,
+            decoration: const InputDecoration(labelText: 'Select Department'),
+            items: departments.map((dept) {
               return DropdownMenuItem(
-                value: dept,
-                child: Text(dept.toString().split('.').last),
+                value: dept.id,
+                child: Text(dept.name),
               );
             }).toList(),
             onChanged: (value) {
               setState(() {
-                _selectedDepartment = value;
+                _selectedDepartmentId = value;
               });
             },
           ),
-          DropdownButton<Gender>(
+          DropdownButtonFormField<Gender>(
             value: _selectedGender,
-            hint: const Text('Select Gender'),
+            decoration: const InputDecoration(labelText: 'Select Gender'),
             items: Gender.values.map((gender) {
               return DropdownMenuItem(
                 value: gender,

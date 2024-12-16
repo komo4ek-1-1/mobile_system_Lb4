@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/departments.dart';
 import 'widgets/students.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final ThemeData theme = ThemeData(
   primarySwatch: Colors.blue,
@@ -11,14 +12,17 @@ final ThemeData theme = ThemeData(
   ),
 );
 
-
 /*final ThemeData theme = ThemeData(
   primarySwatch: Colors.blue,
   textTheme: GoogleFonts.latoTextTheme(),
 ); */
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ProviderScope(
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -45,13 +49,13 @@ class TabsScreenState extends State<TabsScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    DepartmentsScreen(),
     const StudentsScreen(),
+    DepartmentsScreen(),
   ];
 
   final List<String> _titles = [
+    'Students',
     'Departments',
-    ' ',
   ];
 
   void _onItemTapped(int index) {
@@ -67,17 +71,19 @@ class TabsScreenState extends State<TabsScreen> {
         title: Text(_titles[_selectedIndex], 
         style: Theme.of(context).textTheme.titleMedium),
       ),
-      body: _screens[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.school),
-            label: 'Departments',
-            
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.people),
             label: 'Students',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.school),
+            label: 'Departments',
           ),
         ],
         currentIndex: _selectedIndex,

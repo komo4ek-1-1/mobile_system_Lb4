@@ -1,62 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/student.dart';
+import '../providers/students_provider.dart';
 import 'student_item.dart';
 import 'NewStudent.dart';
 
-class StudentsScreen extends StatefulWidget {
+class StudentsScreen extends ConsumerStatefulWidget {
   const StudentsScreen({super.key});
 
   @override
-  State<StudentsScreen> createState() => _StudentsScreenState();
+  ConsumerState<StudentsScreen> createState() => _StudentsScreenState();
 }
 
-class _StudentsScreenState extends State<StudentsScreen> {
-  final List<Student> students = [
-    Student(
-      firstName: 'Олег',
-      lastName: 'Черешниченко',
-      department: Department.it,
-      grade: 90,
-      gender: Gender.male,
-    ),
-    Student(
-      firstName: 'Дарина',
-      lastName: 'Довгих',
-      department: Department.finance,
-      grade: 85,
-      gender: Gender.female,
-    ),
-    Student(
-      firstName: 'Кирило',
-      lastName: 'Розбийголова',
-      department: Department.law,
-      grade: 100,
-      gender: Gender.male,
-    ),
-    // Додайте більше студентів 
-  ];
-
+class _StudentsScreenState extends ConsumerState<StudentsScreen> {
   Student? _recentlyDeletedStudent; // Зберігає видаленого студента для Undo
   int? _recentlyDeletedIndex; // Зберігає індекс видаленого студента
 
-/*
-  void _addStudent() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return NewStudent(
-          onSave: (newStudent) {
-            setState(() {
-              students.add(newStudent);
-            });
-          },
-        );
-      },
-    );
-  }*/
-
-  void _editStudent(Student student) {
+  void _editStudent(Student student, int index) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -64,10 +24,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
         return NewStudent(
           student: student,
           onSave: (updatedStudent) {
-            setState(() {
-              final index = students.indexOf(student);
-              students[index] = updatedStudent;
-            });
+            ref.read(studentsProvider.notifier).editStudent(updatedStudent, index);
           },
         );
       },
@@ -75,11 +32,12 @@ class _StudentsScreenState extends State<StudentsScreen> {
   }
 
   void _deleteStudent(int index) {
+    final students = ref.read(studentsProvider);
     setState(() {
       _recentlyDeletedStudent = students[index];
       _recentlyDeletedIndex = index;
-      students.removeAt(index); // Видаляємо студента зі списку
     });
+    ref.read(studentsProvider.notifier).removeStudent(index);
 
     // Показуємо Snackbar із можливістю скасування
     ScaffoldMessenger.of(context).showSnackBar(
@@ -98,37 +56,39 @@ class _StudentsScreenState extends State<StudentsScreen> {
 
   void _undoDelete() {
     if (_recentlyDeletedStudent != null && _recentlyDeletedIndex != null) {
+      ref.read(studentsProvider.notifier).insertStudent(_recentlyDeletedStudent!, _recentlyDeletedIndex!);
       setState(() {
-        students.insert(_recentlyDeletedIndex!, _recentlyDeletedStudent!);
         _recentlyDeletedStudent = null;
         _recentlyDeletedIndex = null;
       });
     }
   }
 
-    @override
+  void _addStudent() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return NewStudent(
+          onSave: (newStudent) {
+            ref.read(studentsProvider.notifier).addStudent(newStudent);
+          },
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final students = ref.watch(studentsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Students'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                builder: (ctx) {
-                  return NewStudent(
-                    onSave: (newStudent) {
-                      setState(() {
-                        students.add(newStudent);
-                      });
-                    },
-                  );
-                },
-              );
-            },
+            onPressed: _addStudent,
           ),
         ],
       ),
@@ -136,7 +96,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
         itemCount: students.length,
         itemBuilder: (ctx, index) {
           return Dismissible(
-            key: ValueKey(students[index]),
+            key: ValueKey(students[index].firstName + students[index].lastName + index.toString()),
             direction: DismissDirection.endToStart,
             background: Container(
               color: Colors.red,
@@ -148,7 +108,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
               _deleteStudent(index);
             },
             child: InkWell(
-              onTap: () => _editStudent(students[index]),
+              onTap: () => _editStudent(students[index], index),
               child: StudentItem(student: students[index]),
             ),
           );

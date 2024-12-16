@@ -46,7 +46,7 @@ class StudentItem extends StatelessWidget {
           Row(
             children: [
               Icon(
-                departmentIcons[student.department] ?? Icons.help_outline,
+                departmentIcons[student.departmentId] ?? Icons.help_outline,
                 color: Colors.grey[700],
               ),
               const SizedBox(width: 8),
