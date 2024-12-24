@@ -1,5 +1,8 @@
+// ignore_for_file: file_names
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../models/student.dart';
 import '../providers/departments_provider.dart';
 
@@ -17,6 +20,7 @@ class _NewStudentState extends ConsumerState<NewStudent> {
   // Контролери для текстових полів
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
+  final _uuid = Uuid(); // Ініціалізація UUID
 
   String? _selectedDepartmentId; // Вибраний департамент
   Gender? _selectedGender; // Вибрана стать
@@ -47,6 +51,7 @@ class _NewStudentState extends ConsumerState<NewStudent> {
 
     // Створюємо нового студента
     final newStudent = Student(
+      id: _uuid.v4(), // Генерація унікального id
       firstName: _firstNameController.text,
       lastName: _lastNameController.text,
       departmentId: _selectedDepartmentId!,

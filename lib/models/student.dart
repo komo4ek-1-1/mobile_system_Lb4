@@ -4,6 +4,7 @@ enum Department { finance, law, it, medical }
 enum Gender { male, female }
 
 class Student {
+  final String id; // Додаємо поле для зберігання ідентифікатора
   final String firstName;
   final String lastName;
   final String departmentId;
@@ -11,6 +12,7 @@ class Student {
   final Gender gender;
 
   Student({
+    required this.id, // Ідентифікатор повинен бути обов'язковим
     required this.firstName,
     required this.lastName,
     required this.departmentId,
@@ -19,6 +21,7 @@ class Student {
   });
 
   Student copyWith({
+    String? id,
     String? firstName,
     String? lastName,
     String? departmentId,
@@ -26,6 +29,7 @@ class Student {
     Gender? gender,
   }) {
     return Student(
+      id: id ?? this.id,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       departmentId: departmentId ?? this.departmentId,

@@ -13,8 +13,43 @@ class StudentsScreen extends ConsumerStatefulWidget {
 }
 
 class _StudentsScreenState extends ConsumerState<StudentsScreen> {
+  bool _isLoading = false;
   Student? _recentlyDeletedStudent; // Зберігає видаленого студента для Undo
   int? _recentlyDeletedIndex; // Зберігає індекс видаленого студента
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStudents();
+  }
+
+  Future<void> _fetchStudents() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      await ref.read(studentsProvider.notifier).fetchStudents();
+    } catch (error) {
+      // Handle error
+    }
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  void _addStudent() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return NewStudent(
+          onSave: (newStudent) {
+            ref.read(studentsProvider.notifier).addStudent(newStudent);
+          },
+        );
+      },
+    );
+  }
 
   void _editStudent(Student student, int index) {
     showModalBottomSheet(
@@ -37,9 +72,9 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
       _recentlyDeletedStudent = students[index];
       _recentlyDeletedIndex = index;
     });
-    ref.read(studentsProvider.notifier).removeStudent(index);
+    ref.read(studentsProvider.notifier).removeStudentLocal(index);
 
-    // Показуємо Snackbar із можливістю скасування
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -47,35 +82,25 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
         ),
         action: SnackBarAction(
           label: 'Undo',
-          onPressed: _undoDelete, // Повертаємо видаленого студента
+          onPressed: _undoDelete,
         ),
-        duration: const Duration(seconds: 3), // Тривалість показу Snackbar
+        duration: const Duration(seconds: 3),
       ),
-    );
+    ).closed.then((value) {
+      if (value != SnackBarClosedReason.action) {
+        ref.read(studentsProvider.notifier).removeStudent(_recentlyDeletedStudent!);
+      }
+    });
   }
 
   void _undoDelete() {
     if (_recentlyDeletedStudent != null && _recentlyDeletedIndex != null) {
-      ref.read(studentsProvider.notifier).insertStudent(_recentlyDeletedStudent!, _recentlyDeletedIndex!);
+      ref.read(studentsProvider.notifier).insertStudentLocal(_recentlyDeletedStudent!, _recentlyDeletedIndex!);
       setState(() {
         _recentlyDeletedStudent = null;
         _recentlyDeletedIndex = null;
       });
     }
-  }
-
-  void _addStudent() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return NewStudent(
-          onSave: (newStudent) {
-            ref.read(studentsProvider.notifier).addStudent(newStudent);
-          },
-        );
-      },
-    );
   }
 
   @override
@@ -92,30 +117,33 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
           ),
         ],
       ),
-      body: ListView.separated(
-        itemCount: students.length,
-        itemBuilder: (ctx, index) {
-          return Dismissible(
-            key: ValueKey(students[index].firstName + students[index].lastName + index.toString()),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              color: Colors.red,
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: const Icon(Icons.delete, color: Colors.white),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.separated(
+              itemCount: students.length,
+              itemBuilder: (ctx, index) {
+                return Dismissible(
+                  key: ValueKey(
+                      students[index].firstName + students[index].lastName + index.toString()),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  onDismissed: (direction) {
+                    _deleteStudent(index);
+                  },
+                  child: InkWell(
+                    onTap: () => _editStudent(students[index], index),
+                    child: StudentItem(student: students[index]),
+                  ),
+                );
+              },
+              separatorBuilder: (ctx, index) =>
+                  Divider(height: 1, color: Colors.grey[300]),
             ),
-            onDismissed: (direction) {
-              _deleteStudent(index);
-            },
-            child: InkWell(
-              onTap: () => _editStudent(students[index], index),
-              child: StudentItem(student: students[index]),
-            ),
-          );
-        },
-        separatorBuilder: (ctx, index) =>
-            Divider(height: 1, color: Colors.grey[300]),
-      ),
     );
   }
 }
